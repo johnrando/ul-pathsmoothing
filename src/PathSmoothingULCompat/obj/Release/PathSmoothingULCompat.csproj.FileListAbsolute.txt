@@ -1,0 +1,5 @@
+C:\Games\Steam\steamapps\common\7 Days To Die\ul-pathsmoothing\src\PathSmoothingULCompat\bin\Release\PathSmoothingULCompat.dll
+C:\Games\Steam\steamapps\common\7 Days To Die\ul-pathsmoothing\src\PathSmoothingULCompat\obj\Release\PathSmoothingULCompat.csproj.AssemblyReference.cache
+C:\Games\Steam\steamapps\common\7 Days To Die\ul-pathsmoothing\src\PathSmoothingULCompat\obj\Release\PathSmoothingULCompat.GeneratedMSBuildEditorConfig.editorconfig
+C:\Games\Steam\steamapps\common\7 Days To Die\ul-pathsmoothing\src\PathSmoothingULCompat\obj\Release\PathSmoothingULCompat.csproj.CoreCompileInputs.cache
+C:\Games\Steam\steamapps\common\7 Days To Die\ul-pathsmoothing\src\PathSmoothingULCompat\obj\Release\PathSmoothingULCompat.dll

@@ -1,0 +1,8 @@
+is_global = true
+build_property.RootNamespace = PathSmoothingULCompat
+build_property.ProjectDir = C:\Games\Steam\steamapps\common\7 Days To Die\ul-pathsmoothing\src\PathSmoothingULCompat\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.CsWinRTUseWindowsUIXamlProjections = false
+build_property.EffectiveAnalysisLevelStyle = 
+build_property.EnableCodeStyleSeverity = 
