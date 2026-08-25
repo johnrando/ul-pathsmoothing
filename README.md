@@ -1,6 +1,6 @@
 # PathSmoothing — Undead Legacy compatibility patch
 
-A small 7 Days To Die mod that makes [PathSmoothing](https://www.nexusmods.com/users/102102433)
+A small 7 Days To Die mod that makes **[PathSmoothing by redbeardt](https://www.nexusmods.com/users/102102433)**
 (by redbeardt) work correctly when **[Undead Legacy by SubQuake](https://ul.subquake.com)** is installed.
 
 Both mods patch the same vanilla movement method, and UL's patch wins — leaving PathSmoothing
