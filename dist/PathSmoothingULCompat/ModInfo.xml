@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="PathSmoothingULCompat" />
+	<DisplayName value="Path Smoothing - Undead Legacy Compatibility" />
+	<Description value="Re-applies PathSmoothing's end-of-path fixes inside Undead Legacy's own movement and AI code, which replaces the vanilla methods PathSmoothing patches. Does nothing unless both mods are installed." />
+	<Author value="John Rando" />
+	<Version value="0.0.0.1" />
+	<Website value="" />
+</xml>

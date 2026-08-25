@@ -25,7 +25,8 @@ namespace PathSmoothingULCompat
 	{
 		/// <summary>
 		/// The Undead Legacy build whose movement code was actually read and confirmed to match what
-		/// these patches expect. Bump after re-verifying; see the checklist in the project README.
+		/// these patches expect. Bump only after re-checking UL's movement code against what each fix
+		/// targets - bumping it alone just silences the warning.
 		/// </summary>
 		internal const string TestedAgainst = "2.7.15";
 

@@ -1,5 +1,14 @@
-decompiled/
-reference/PathSmoothing/PathSmoothing.dll
-bin/
-obj/
-dist/
+# Whitelist: ignore everything, then re-include only what this repo ships.
+*
+
+!/.gitignore
+!/README.md
+
+!/src/
+!/src/**
+!/dist/
+!/dist/**
+
+# Build output that lives inside src/.
+src/**/bin/
+src/**/obj/
