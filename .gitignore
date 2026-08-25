@@ -1,2 +1,5 @@
 decompiled/
 reference/PathSmoothing/PathSmoothing.dll
+bin/
+obj/
+dist/
