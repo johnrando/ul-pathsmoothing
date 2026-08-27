@@ -41,17 +41,6 @@ namespace PathSmoothingULCompat
 		/// </summary>
 		internal static MethodInfo UndeadLegacyMoveHelperPrefix;
 
-		/// <summary>
-		/// UL's stand-in for vanilla <c>EAIApproachAndAttackTarget</c> (unrelated class hierarchy).
-		/// PathSmoothing's obstruction check tests for the vanilla type with a hard <c>is</c>, so
-		/// entities retargeted to this one - only <c>animalBear</c> in UL's entityclasses.xml -
-		/// never get smoothing suppressed near a wall.
-		/// </summary>
-		internal static Type UndeadLegacyApproachAndAttackTarget;
-
-		/// <summary>Accessor for the private <c>EAIManager.tasks</c> list.</summary>
-		internal static AccessTools.FieldRef<EAIManager, EAITaskList> AiManagerTasks;
-
 		internal static bool PathSmoothingPresent => FindAssembly(PathSmoothingAssemblyName) != null;
 
 		internal static bool UndeadLegacyPresent => FindAssembly(UndeadLegacyAssemblyName) != null;
@@ -142,30 +131,6 @@ namespace PathSmoothingULCompat
 					+ "HashSet<EntityAlive> (found " + field.FieldType.FullName + ").");
 			}
 			return set;
-		}
-
-		/// <summary>Resolves everything the UL approach-and-attack obstruction check needs.</summary>
-		internal static bool ResolveApproachAndAttackFix()
-		{
-			UndeadLegacyApproachAndAttackTarget =
-				FindType(UndeadLegacyAssemblyName, "EAIULM_ApproachAndAttackTarget");
-			if (UndeadLegacyApproachAndAttackTarget == null)
-			{
-				return false;
-			}
-
-			if (DontSmoothEntities == null && !ResolveSharedSets())
-			{
-				return false;
-			}
-
-			if (AccessTools.Field(typeof(EAIManager), "tasks") == null)
-			{
-				Log.Error(Compat.LogPrefix + "EAIManager has no 'tasks' field.");
-				return false;
-			}
-			AiManagerTasks = AccessTools.FieldRefAccess<EAIManager, EAITaskList>("tasks");
-			return true;
 		}
 
 		private static Assembly FindAssembly(string simpleName)

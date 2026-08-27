@@ -27,8 +27,6 @@ namespace PathSmoothingULCompat
 		/// <summary>Outcome of each fix, as reported by the <c>psul</c> console command.</summary>
 		internal static string EndOfPathFixStatus = NotRunYet;
 
-		internal static string ApproachAndAttackFixStatus = NotRunYet;
-
 		internal static string PrefixOrderFixStatus = NotRunYet;
 
 		internal static string ToggleTrackingStatus = NotRunYet;
@@ -82,7 +80,6 @@ namespace PathSmoothingULCompat
 			TrackSmoothingToggle(harmony);
 			ApplyPrefixOrderFix(harmony);
 			ApplyEndOfPathFix(harmony);
-			ApplyApproachAndAttackFix(harmony);
 		}
 
 		/// <summary>
@@ -118,7 +115,6 @@ namespace PathSmoothingULCompat
 		private static void SetAllStatuses(string status)
 		{
 			EndOfPathFixStatus = status;
-			ApproachAndAttackFixStatus = status;
 			PrefixOrderFixStatus = status;
 			ToggleTrackingStatus = status;
 		}
@@ -174,32 +170,6 @@ namespace PathSmoothingULCompat
 			EndOfPathFixStatus = "applied - " + sites + " check(s) rewritten in UL's UpdateMoveHelper prefix";
 			Log.Out(LogPrefix + "End-of-path fix applied to Undead Legacy's UpdateMoveHelper prefix ("
 				+ sites + " check(s) rewritten).");
-		}
-
-		private static void ApplyApproachAndAttackFix(Harmony harmony)
-		{
-			if (!Refs.ResolveApproachAndAttackFix())
-			{
-				ApproachAndAttackFixStatus = "NOT APPLIED - could not resolve what it patches (see log)";
-				Log.Error(LogPrefix + "Approach-and-attack fix NOT applied: entities using "
-					+ "EAIULM_ApproachAndAttackTarget keep pathing into walls while closing on a target.");
-				return;
-			}
-
-			MethodInfo findPath = AccessTools.Method(typeof(EntityAlive), "FindPath");
-			if (findPath == null)
-			{
-				ApproachAndAttackFixStatus = "NOT APPLIED - EntityAlive.FindPath not found";
-				Log.Error(LogPrefix + "Approach-and-attack fix NOT applied: EntityAlive.FindPath not found.");
-				return;
-			}
-
-			harmony.Patch(findPath, prefix: new HarmonyMethod(
-				AccessTools.Method(typeof(UlApproachAndAttackSmoothingFix),
-					nameof(UlApproachAndAttackSmoothingFix.Prefix))));
-			ApproachAndAttackFixStatus = "applied - EAIULM_ApproachAndAttackTarget now suppresses smoothing";
-			Log.Out(LogPrefix + "Approach-and-attack fix applied: EAIULM_ApproachAndAttackTarget now "
-				+ "suppresses smoothing near obstructions.");
 		}
 	}
 }

@@ -1,7 +1,7 @@
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Live hit counts for both fixes, reported by the <c>psul</c> console command.
+	/// Live hit counts for the end-of-path fix, reported by the <c>psul</c> console command.
 	///
 	/// These exist because the load-time log can only prove the IL rewrite matched; it cannot prove
 	/// the rewritten call site is reached at runtime, which is the one thing worth being sure of
@@ -16,18 +16,10 @@ namespace PathSmoothingULCompat
 		/// <summary>Of those, how many reported "at the end of the path".</summary>
 		internal static int EndOfPathHits;
 
-		/// <summary>Times an entity was found running UL's approach-and-attack task.</summary>
-		internal static int ApproachChecks;
-
-		/// <summary>Of those, how many were blocked and had smoothing suppressed.</summary>
-		internal static int ApproachSuppressions;
-
 		internal static void Reset()
 		{
 			EndOfPathChecks = 0;
 			EndOfPathHits = 0;
-			ApproachChecks = 0;
-			ApproachSuppressions = 0;
 		}
 	}
 }
