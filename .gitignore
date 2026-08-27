@@ -1,6 +1,7 @@
 # Whitelist: ignore everything, then re-include only what this repo ships.
 *
 
+!/.gitattributes
 !/.gitignore
 !/LICENSE
 !/README.md
