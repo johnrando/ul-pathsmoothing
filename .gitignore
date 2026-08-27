@@ -1,0 +1,15 @@
+# Whitelist: ignore everything, then re-include only what this repo ships.
+*
+
+!/.gitignore
+!/LICENSE
+!/README.md
+
+!/src/
+!/src/**
+!/dist/
+!/dist/**
+
+# Build output that lives inside src/.
+src/**/bin/
+src/**/obj/
