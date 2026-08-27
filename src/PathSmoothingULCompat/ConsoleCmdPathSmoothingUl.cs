@@ -29,7 +29,6 @@ namespace PathSmoothingULCompat
 				+ " (read from " + UndeadLegacyVersion.DetectedSource + ")");
 			Output("  prefix-order fix       : " + Compat.PrefixOrderFixStatus);
 			Output("  end-of-path fix        : " + Compat.EndOfPathFixStatus);
-			Output("  approach-and-attack fix: " + Compat.ApproachAndAttackFixStatus);
 			Output("  'ps' toggle tracking   : " + Compat.ToggleTrackingStatus);
 			Output("  PathSmoothing switched : " + (Compat.SmoothingActive ? "on" : "off"));
 			Output("  UpdateMoveHelper prefixes, in call order:");
@@ -38,8 +37,6 @@ namespace PathSmoothingULCompat
 				+ ", smoothing suppressed: " + Describe(Refs.DontSmoothEntities));
 			Output("  end-of-path checks run : " + Counters.EndOfPathChecks
 				+ " (" + Counters.EndOfPathHits + " reported end-of-path)");
-			Output("  UL approach checks run : " + Counters.ApproachChecks
-				+ " (" + Counters.ApproachSuppressions + " suppressed smoothing)");
 
 			if (Counters.EndOfPathChecks == 0)
 			{

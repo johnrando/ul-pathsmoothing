@@ -6,10 +6,10 @@ using HarmonyLib;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Reports which Undead Legacy build is running and warns when it is not the one these patches
-	/// were tested against. It does not gate anything - UL's current branch is numbered 2.7.x and
-	/// takes a new patch number regularly, so refusing to install on any unrecognised number would
-	/// break the mod on routine updates.
+	/// Reports which Undead Legacy build is running and warns when it falls outside the range these
+	/// patches were tested against. It does not gate anything - UL's current branch is numbered
+	/// 2.7.x and takes a new patch number regularly, so refusing to install on any unrecognised
+	/// number would break the mod on routine updates.
 	///
 	/// The real safety net is structural, not version-based: each fix checks the code it targets and
 	/// logs loudly if it no longer matches. The transpiler in particular matches an exact IL pattern
@@ -18,17 +18,26 @@ namespace PathSmoothingULCompat
 	///
 	/// Only two of UL's version markers are trustworthy, both on <c>H_UndeadLegacy</c>: the
 	/// <c>[BepInPlugin]</c> attribute and the <c>pluginVersion</c> literal. The assembly version is
-	/// hardcoded 1.0.0.0 and <c>ModInfo.xml</c> lags reality (it read 2.7.01 on a 2.7.15 install), so
+	/// hardcoded 1.0.0.0 and <c>ModInfo.xml</c> lags reality (it read 2.7.01 on a 2.7.17 install), so
 	/// neither is used here.
 	/// </summary>
 	internal static class UndeadLegacyVersion
 	{
 		/// <summary>
-		/// The Undead Legacy build whose movement code was actually read and confirmed to match what
-		/// these patches expect. Bump only after re-checking UL's movement code against what each fix
-		/// targets - bumping it alone just silences the warning.
+		/// Oldest Undead Legacy build these patches were run against. UL's movement code was unchanged
+		/// across the whole range, so any build inside it reports as tested.
 		/// </summary>
-		internal const string TestedAgainst = "2.7.15";
+		internal const string TestedFrom = "2.7.14";
+
+		/// <summary>
+		/// Newest Undead Legacy build these patches were run against. Bump only after re-checking UL.s
+		/// movement code against what each fix targets - bumping it alone just silences the warning.
+		/// </summary>
+		internal const string TestedTo = "2.7.17";
+
+		/// <summary>Human-readable form of the tested range, for log lines and <c>psul</c>.</summary>
+		private static string TestedRange =>
+			TestedFrom == TestedTo ? TestedFrom : TestedFrom + " - " + TestedTo;
 
 		internal static string DetectedRaw = "not detected";
 
@@ -38,8 +47,8 @@ namespace PathSmoothingULCompat
 		internal static string Status = "not checked";
 
 		/// <summary>
-		/// Logs the detected version, warning if it is anything other than
-		/// <see cref="TestedAgainst"/>. Never blocks: patching continues either way.
+		/// Logs the detected version, warning if it falls outside <see cref="TestedFrom"/> ..
+		/// <see cref="TestedTo"/>. Never blocks: patching continues either way.
 		/// </summary>
 		internal static void Report()
 		{
@@ -47,28 +56,29 @@ namespace PathSmoothingULCompat
 			if (raw == null)
 			{
 				DetectedRaw = "unknown";
-				Status = "unknown - only tested under " + TestedAgainst;
+				Status = "unknown - only tested under " + TestedRange;
 				Log.Warning(Compat.LogPrefix + "Could not read Undead Legacy's version. This patch has "
-					+ "only been tested under Undead Legacy " + TestedAgainst + ". It will still install, "
+					+ "only been tested under Undead Legacy " + TestedRange + ". It will still install, "
 					+ "and each fix logs an error if the code it targets no longer matches.");
 				return;
 			}
 
 			DetectedRaw = raw;
 			Version detected = Parse(raw);
-			Version tested = Parse(TestedAgainst);
+			Version from = Parse(TestedFrom);
+			Version to = Parse(TestedTo);
 
-			if (detected != null && tested != null && detected == tested)
+			if (detected != null && from != null && to != null && detected >= from && detected <= to)
 			{
 				Status = raw + " - tested";
 				Log.Out(Compat.LogPrefix + "Undead Legacy " + raw + " detected (from " + DetectedSource
-					+ "), which is the version this patch was tested against.");
+					+ "), which is within the range this patch was tested against (" + TestedRange + ").");
 				return;
 			}
 
-			Status = raw + " - UNTESTED, only tested under " + TestedAgainst;
+			Status = raw + " - UNTESTED, only tested under " + TestedRange;
 			Log.Warning(Compat.LogPrefix + "Undead Legacy " + raw + " detected (from " + DetectedSource
-				+ "), but this patch has only been tested under Undead Legacy " + TestedAgainst
+				+ "), but this patch has only been tested under Undead Legacy " + TestedRange
 				+ ". It will still install, and each fix logs an error if the code it targets no longer "
 				+ "matches - but re-verify movement behaviour, and check 'psul' if zombies look wrong.");
 		}
