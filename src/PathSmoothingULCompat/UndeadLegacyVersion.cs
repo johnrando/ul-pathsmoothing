@@ -18,7 +18,7 @@ namespace PathSmoothingULCompat
 	///
 	/// Only two of UL's version markers are trustworthy, both on <c>H_UndeadLegacy</c>: the
 	/// <c>[BepInPlugin]</c> attribute and the <c>pluginVersion</c> literal. The assembly version is
-	/// hardcoded 1.0.0.0 and <c>ModInfo.xml</c> lags reality (it read 2.7.01 on a 2.7.17 install), so
+	/// hardcoded 1.0.0.0 and <c>ModInfo.xml</c> lags reality (it read 2.7.01 on a 2.7.19 install), so
 	/// neither is used here.
 	/// </summary>
 	internal static class UndeadLegacyVersion
@@ -27,13 +27,13 @@ namespace PathSmoothingULCompat
 		/// Oldest Undead Legacy build these patches were run against. UL's movement code was unchanged
 		/// across the whole range, so any build inside it reports as tested.
 		/// </summary>
-		internal const string TestedFrom = "2.7.14";
+		internal const string TestedFrom = "2.7.15";
 
 		/// <summary>
 		/// Newest Undead Legacy build these patches were run against. Bump only after re-checking UL.s
 		/// movement code against what each fix targets - bumping it alone just silences the warning.
 		/// </summary>
-		internal const string TestedTo = "2.7.17";
+		internal const string TestedTo = "2.7.19";
 
 		/// <summary>Human-readable form of the tested range, for log lines and <c>psul</c>.</summary>
 		private static string TestedRange =>

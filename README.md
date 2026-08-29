@@ -10,7 +10,7 @@ It is additive: it does not modify, replace or redistribute either mod's DLL. In
 it wires itself in at load time. With either of the other two missing, it logs a line and does
 nothing.
 
-Tested against **Undead Legacy 2.7.14 through 2.7.17**. Other versions still work — the mod warns
+Tested against **Undead Legacy 2.7.15 through 2.7.19**. Other versions still work — the mod warns
 rather than blocking, and each fix reports an error if the code it targets no longer matches.
 
 ## What it fixes
@@ -52,7 +52,7 @@ Run `psul` in the console (F1) — this mod's command, separate from PathSmoothi
 
 ```
 PathSmoothing/UL compatibility patch
-  Undead Legacy version  : 2.7.17 - tested (read from [BepInPlugin] attribute)
+  Undead Legacy version  : 2.7.19 - tested (read from [BepInPlugin] attribute)
   prefix-order fix       : applied - UL's UpdateMoveHelper prefix now sorts last
   end-of-path fix        : applied - 1 check(s) rewritten in UL's UpdateMoveHelper prefix
   'ps' toggle tracking   : applied - 'ps' also switches these patches
