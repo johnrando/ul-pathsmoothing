@@ -3,13 +3,22 @@ using System.Collections.Generic;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// <c>psul</c> - reports whether each fix is installed and, more usefully, how many times each
-	/// one has actually run. This is separate from PathSmoothing's own <c>ps</c> command and does
-	/// not replace or shadow it.
+	/// <c>psul</c> - prints a short block saying whether the compatibility patch is doing its job.
+	/// <c>psul info</c> prints the diagnostics and counters, <c>psul reset</c> zeroes them.
 	///
-	/// The load-time log proves the IL rewrite matched. Only a non-zero end-of-path counter proves
-	/// the rewritten call site is being reached, which is the part worth checking when the patched
-	/// method is itself another mod's Harmony prefix.
+	/// There is nothing to set here: both fixes are Harmony work done once at load, and
+	/// PathSmoothing's own <c>ps</c> already switches the behaviour off. So unlike the sibling mods
+	/// the bare command toggles nothing - it answers one question, "is this working", in as few lines
+	/// as that takes.
+	///
+	/// Everything behind that answer lives in <c>psul info</c>, and it matters more here than in
+	/// those siblings, because neither fix is visible from the outside. The prefix call order is the
+	/// direct evidence for the ordering fix, read live from Harmony rather than remembered from load
+	/// time. The end-of-path counter is the only evidence for the other one: the startup log can
+	/// prove the IL rewrite matched, but only a non-zero count proves the rewritten call site - which
+	/// sits inside another mod's Harmony prefix - is actually being reached.
+	///
+	/// This is separate from PathSmoothing's own <c>ps</c> command and does not shadow it.
 	/// </summary>
 	public class ConsoleCmdPathSmoothingUl : ConsoleCmdAbstract
 	{
@@ -17,25 +26,57 @@ namespace PathSmoothingULCompat
 
 		public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
 		{
-			if (_params.Count > 0 && _params[0].ToLower() == "reset")
+			string command = _params.Count > 0 ? _params[0].ToLower() : string.Empty;
+
+			switch (command)
 			{
+			case "":
+				OutputStatus();
+				return;
+
+			case "info":
+				OutputInfo();
+				return;
+
+			case "reset":
 				Counters.Reset();
 				Output("Counters reset.");
 				return;
-			}
 
-			Output("PathSmoothing/UL compatibility patch");
-			Output("  Undead Legacy version  : " + UndeadLegacyVersion.Status
+			default:
+				Output("Unknown option '" + _params[0] + "'. Try: psul [info|reset]");
+				return;
+			}
+		}
+
+		/// <summary>The short block: the verdict, and the three lines it is drawn from.</summary>
+		private static void OutputBlock()
+		{
+			Output(Verdict());
+			Line("prefix order", OrderLine());
+			Line("end-of-path fix", EndOfPathLine());
+			Line("smoothing (ps)", SmoothingLine());
+		}
+
+		private static void OutputStatus()
+		{
+			OutputBlock();
+			Line("psul info", "version, counters and diagnostics");
+		}
+
+		/// <summary>The short block, with the read-only lines appended in the same column.</summary>
+		private static void OutputInfo()
+		{
+			OutputBlock();
+			Line("Undead Legacy", UndeadLegacyVersion.Status
 				+ " (read from " + UndeadLegacyVersion.DetectedSource + ")");
-			Output("  prefix-order fix       : " + Compat.PrefixOrderFixStatus);
-			Output("  end-of-path fix        : " + Compat.EndOfPathFixStatus);
-			Output("  'ps' toggle tracking   : " + Compat.ToggleTrackingStatus);
-			Output("  PathSmoothing switched : " + (Compat.SmoothingActive ? "on" : "off"));
-			Output("  UpdateMoveHelper prefixes, in call order:");
-			Output("    " + MoveHelperPrefixOrderFix.PrefixOrder);
-			Output("  entities moving direct : " + Describe(Refs.DirectMovers)
-				+ ", smoothing suppressed: " + Describe(Refs.DontSmoothEntities));
-			Output("  end-of-path checks run : " + Counters.EndOfPathChecks
+			Line("prefix-order fix", Compat.PrefixOrderFixStatus);
+			Line("end-of-path fix", Compat.EndOfPathFixStatus);
+			Line("'ps' tracking", Compat.ToggleTrackingStatus);
+			Line("prefix call order", MoveHelperPrefixOrderFix.DescribeOrder());
+			Line("entities", Describe(Refs.DirectMovers) + " moving direct, "
+				+ Describe(Refs.DontSmoothEntities) + " smoothing suppressed");
+			Line("end-of-path checks", Counters.EndOfPathChecks
 				+ " (" + Counters.EndOfPathHits + " reported end-of-path)");
 
 			if (Counters.EndOfPathChecks == 0)
@@ -46,14 +87,73 @@ namespace PathSmoothingULCompat
 			}
 		}
 
-		private static void Output(string line)
+		/// <summary>
+		/// One line of the block. Every label is padded to the width of the longest one -
+		/// "end-of-path checks" - so the short block and the read-only lines share a column and
+		/// <c>psul info</c> reads as one block rather than two.
+		/// </summary>
+		private static void Line(string _label, string _value)
 		{
-			SdtdConsole.Instance.Output(line);
+			Output("  " + _label.PadRight(18) + ": " + _value);
 		}
 
-		private static string Describe(HashSet<EntityAlive> set)
+		/// <summary>
+		/// The headline. Switched off is its own answer rather than a fault: with <c>ps 0</c> these
+		/// patches are inert by design, and PathSmoothing's prefix is unregistered, so there is no
+		/// call order left to be correct.
+		/// </summary>
+		private static string Verdict()
 		{
-			return set == null ? "unavailable" : set.Count.ToString();
+			if (!Compat.SmoothingActive)
+			{
+				return "PathSmoothing/UL compatibility patch is IDLE - PathSmoothing is switched off";
+			}
+			bool working = Compat.PrefixOrderFixApplied && Compat.EndOfPathFixApplied
+				&& MoveHelperPrefixOrderFix.OrderIsCorrect();
+			return "PathSmoothing/UL compatibility patch is " + (working ? "WORKING" : "NOT WORKING");
+		}
+
+		/// <summary>
+		/// The call order, read live from Harmony. PathSmoothing has to come first, or its smoothed
+		/// move target is overwritten before Undead Legacy ever reads it.
+		/// </summary>
+		private static string OrderLine()
+		{
+			string order = MoveHelperPrefixOrderFix.ShortOrder();
+			if (MoveHelperPrefixOrderFix.OrderIsCorrect())
+			{
+				return order + " (correct)";
+			}
+			if (!Compat.SmoothingActive)
+			{
+				return order;
+			}
+			return order + " (WRONG - PathSmoothing must come first)";
+		}
+
+		private static string EndOfPathLine()
+		{
+			if (!Compat.EndOfPathFixApplied)
+			{
+				return "NOT APPLIED - see 'psul info'";
+			}
+			return "applied, " + Compat.EndOfPathSites
+				+ (Compat.EndOfPathSites == 1 ? " check rewritten" : " checks rewritten");
+		}
+
+		private static string SmoothingLine()
+		{
+			return Compat.SmoothingActive ? "on" : "off - 'ps 1' switches PathSmoothing back on";
+		}
+
+		private static string Describe(HashSet<EntityAlive> _set)
+		{
+			return _set == null ? "unavailable" : _set.Count.ToString();
+		}
+
+		private static void Output(string _line)
+		{
+			SdtdConsole.Instance.Output(_line);
 		}
 
 		public override string[] getCommands()
@@ -68,14 +168,17 @@ namespace PathSmoothingULCompat
 
 		public override string getHelp()
 		{
-			return "Usage: psul [reset]\r\n\r\nPrints whether each compatibility fix was installed at load "
-				+ "time and how many times each has run since.\r\n\r\nThe key line is the prefix call order "
-				+ "for UpdateMoveHelper: PathSmoothing must appear BEFORE UndeadLegacy, or PathSmoothing's "
-				+ "smoothed move target is overwritten before UL ever reads it and entities zig-zag along "
-				+ "the raw grid path.\r\n\r\nA non-zero 'end-of-path checks run' is proof that the rewritten "
-				+ "code inside Undead Legacy's movement prefix is executing.\r\n\r\n'psul reset' zeroes the "
-				+ "counters so a specific in-game scenario can be measured on its own.\r\n\r\nThis is a "
-				+ "separate command from PathSmoothing's own 'ps'.";
+			return "Usage: psul [info|reset]"
+				+ "\r\n\r\nReports whether this mod's two fixes to the PathSmoothing/Undead Legacy "
+				+ "clash are in place. There is nothing to set.\r\n\r\n'psul' prints the verdict: the "
+				+ "call order of the two movement prefixes, whether the end-of-path rewrite landed, "
+				+ "and whether PathSmoothing is switched on. PathSmoothing must come BEFORE "
+				+ "UndeadLegacy, or its smoothing is overwritten before UL reads it. With 'ps 0' the "
+				+ "block reports idle, which is by design.\r\n\r\n'psul info' adds the Undead Legacy "
+				+ "version, the full patch state and the counters. 'end-of-path checks' above zero is "
+				+ "the proof the rewritten code is being reached; it only moves when an entity tries "
+				+ "to jump a gap to a target it cannot path to.\r\n\r\n'psul reset' zeroes the "
+				+ "counters.\r\n\r\n'ps' is PathSmoothing's own command and is untouched by this mod.";
 		}
 	}
 }

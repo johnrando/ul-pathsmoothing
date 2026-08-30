@@ -31,6 +31,17 @@ namespace PathSmoothingULCompat
 
 		internal static string ToggleTrackingStatus = NotRunYet;
 
+		/// <summary>
+		/// The same two outcomes as booleans, so <c>psul</c>'s verdict line is read off state rather
+		/// than off the wording of the prose above.
+		/// </summary>
+		internal static bool PrefixOrderFixApplied;
+
+		internal static bool EndOfPathFixApplied;
+
+		/// <summary>Checks the end-of-path transpiler rewrote; 1 on a healthy install.</summary>
+		internal static int EndOfPathSites;
+
 		private static bool applied;
 
 		internal static void Apply()
@@ -106,10 +117,11 @@ namespace PathSmoothingULCompat
 				return;
 			}
 
+			PrefixOrderFixApplied = true;
 			PrefixOrderFixStatus = "applied - UL's UpdateMoveHelper prefix now sorts last";
 			Log.Out(LogPrefix + "Prefix-order fix applied: Undead Legacy's UpdateMoveHelper prefix now "
 				+ "runs after PathSmoothing's, so the smoothed move target is the one it reads. Order: "
-				+ MoveHelperPrefixOrderFix.PrefixOrder);
+				+ MoveHelperPrefixOrderFix.DescribeOrder());
 		}
 
 		private static void SetAllStatuses(string status)
@@ -167,6 +179,8 @@ namespace PathSmoothingULCompat
 				Log.Warning(LogPrefix + "End-of-path fix rewrote " + sites + " checks in Undead Legacy's "
 					+ "UpdateMoveHelper prefix; 1 was expected.");
 			}
+			EndOfPathFixApplied = true;
+			EndOfPathSites = sites;
 			EndOfPathFixStatus = "applied - " + sites + " check(s) rewritten in UL's UpdateMoveHelper prefix";
 			Log.Out(LogPrefix + "End-of-path fix applied to Undead Legacy's UpdateMoveHelper prefix ("
 				+ sites + " check(s) rewritten).");

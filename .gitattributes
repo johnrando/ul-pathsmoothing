@@ -1,0 +1,8 @@
+# Text files are stored with LF in the repo and checked out with LF everywhere, so a
+# clone is identical on Windows, Linux and macOS no matter what the cloner has
+# core.autocrlf set to. Without this the normalisation depends on local config.
+* text=auto eol=lf
+
+# The built mod ships from this repo and is installed straight out of dist/, so git
+# must never rewrite its bytes. text=auto would detect this by heuristic; be explicit.
+*.dll binary

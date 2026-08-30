@@ -51,4 +51,24 @@
     <Message Importance="high" Text="Staged mod folder: $(StageDir)" />
   </Target>
 
+  <!-- Zip the staged folder for a GitHub Release. Opt-in - `dotnet build -c Release -t:Package`.
+       The zip lands in release\, which the whitelist .gitignore already ignores, so it never
+       becomes a repo file. The version comes from ModInfo.xml so there is one source of truth. -->
+  <Target Name="Package" DependsOnTargets="Build">
+    <PropertyGroup>
+      <DistDir>$(MSBuildThisFileDirectory)..\..\dist\</DistDir>
+      <ReleaseDir>$(MSBuildThisFileDirectory)..\..\release\</ReleaseDir>
+      <PackageDate>$([System.DateTime]::Now.ToString('yyyyMMdd'))</PackageDate>
+    </PropertyGroup>
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)ModInfo.xml" Query="/xml/Version/@value">
+      <Output TaskParameter="Result" PropertyName="ModVersion" />
+    </XmlPeek>
+    <PropertyGroup>
+      <PackageFile>$(ReleaseDir)$(AssemblyName)-$(ModVersion)-$(PackageDate).zip</PackageFile>
+    </PropertyGroup>
+    <MakeDir Directories="$(ReleaseDir)" />
+    <ZipDirectory SourceDirectory="$(DistDir)" DestinationFile="$(PackageFile)" Overwrite="true" />
+    <Message Importance="high" Text="Release zip: $(PackageFile)" />
+  </Target>
+
 </Project>

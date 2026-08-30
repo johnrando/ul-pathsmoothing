@@ -10,7 +10,7 @@ It is additive: it does not modify, replace or redistribute either mod's DLL. In
 it wires itself in at load time. With either of the other two missing, it logs a line and does
 nothing.
 
-Tested against **Undead Legacy 2.7.14 through 2.7.17**. Other versions still work — the mod warns
+Tested against **Undead Legacy 2.7.15 through 2.7.19**. Other versions still work — the mod warns
 rather than blocking, and each fix reports an error if the code it targets no longer matches.
 
 ## What it fixes
@@ -51,24 +51,36 @@ expected outcome if a future UL or PathSmoothing release moves the code being ta
 Run `psul` in the console (F1) — this mod's command, separate from PathSmoothing's `ps`:
 
 ```
-PathSmoothing/UL compatibility patch
-  Undead Legacy version  : 2.7.17 - tested (read from [BepInPlugin] attribute)
-  prefix-order fix       : applied - UL's UpdateMoveHelper prefix now sorts last
-  end-of-path fix        : applied - 1 check(s) rewritten in UL's UpdateMoveHelper prefix
-  'ps' toggle tracking   : applied - 'ps' also switches these patches
-  PathSmoothing switched : on
-  UpdateMoveHelper prefixes, in call order:
-    PathSmoothing.Patches__EntityMoveHelper__UpdateMoveHelper (priority 400) -> UndeadLegacy.EntityMoveHelper_UpdateMoveHelper (priority 0)
-  entities moving direct : 6, smoothing suppressed: 1
-  end-of-path checks run : 34 (7 reported end-of-path)
+PathSmoothing/UL compatibility patch is WORKING
+  prefix order      : PathSmoothing -> UndeadLegacy (correct)
+  end-of-path fix   : applied, 1 check rewritten
+  smoothing (ps)    : on
+  psul info         : version, counters and diagnostics
 ```
 
-Two lines carry the proof:
+`WORKING` means both fixes are installed **and** the call order is right. The order is read live
+from Harmony, so it reflects what will actually be called rather than what was intended:
+`PathSmoothing` has to come before `UndeadLegacy`, or its smoothed move target is overwritten before
+UL ever reads it. With PathSmoothing switched off (`ps 0`) the block reports `IDLE`, which is by
+design rather than a fault.
 
-- **Prefix call order** — `PathSmoothing` must come *before* `UndeadLegacy`. That is fix 1, read
-  live from Harmony, so it reflects what will actually be called rather than what was intended.
-- **`end-of-path checks run` above zero** — that counter can only increment from inside the
-  rewritten code in UL's own movement prefix. That is fix 2.
+`psul info` adds the Undead Legacy version, the full patch state and the counters:
 
-To make the second one move, give a zombie a jumpable gap to cross rather than a clear run at you.
-`psul reset` zeroes the counters so a single scenario can be measured on its own.
+```
+PathSmoothing/UL compatibility patch is WORKING
+  prefix order      : PathSmoothing -> UndeadLegacy (correct)
+  end-of-path fix   : applied, 1 check rewritten
+  smoothing (ps)    : on
+  Undead Legacy     : 2.7.19 - tested (read from [BepInPlugin] attribute)
+  prefix-order fix  : applied - UL's UpdateMoveHelper prefix now sorts last
+  end-of-path fix   : applied - 1 check(s) rewritten in UL's UpdateMoveHelper prefix
+  'ps' tracking     : applied - 'ps' also switches these patches
+  prefix call order : PathSmoothing.Patches__EntityMoveHelper__UpdateMoveHelper (priority 400) -> UndeadLegacy.EntityMoveHelper_UpdateMoveHelper (priority -2147483648)
+  entities          : 6 moving direct, 1 smoothing suppressed
+  end-of-path checks: 34 (7 reported end-of-path)
+```
+
+**`end-of-path checks` above zero** is the proof for fix 2 — that counter can only increment from
+inside the rewritten code in UL's own movement prefix. To make it move, give a zombie a jumpable gap
+to cross rather than a clear run at you. `psul reset` zeroes the counters so a single scenario can be
+measured on its own.
