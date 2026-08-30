@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
@@ -36,12 +36,13 @@ namespace PathSmoothingULCompat
 	/// </summary>
 	internal static class MoveHelperPrefixOrderFix
 	{
-		/// <summary>Live prefix order, newest read; surfaced by the <c>psul</c> command.</summary>
-		internal static string PrefixOrder = "not inspected";
+		private const string PathSmoothingAssembly = "PathSmoothing";
+
+		private const string UndeadLegacyAssembly = "UndeadLegacy";
 
 		internal static bool Apply(Harmony harmony, MethodInfo undeadLegacyPrefix)
 		{
-			MethodBase original = AccessTools.Method(typeof(EntityMoveHelper), "UpdateMoveHelper");
+			MethodBase original = Original();
 			if (original == null)
 			{
 				Log.Error(Compat.LogPrefix + "EntityMoveHelper.UpdateMoveHelper not found.");
@@ -57,7 +58,6 @@ namespace PathSmoothingULCompat
 			}
 			if (registered.priority == Priority.Last)
 			{
-				PrefixOrder = DescribeOrder(original);
 				Log.Out(Compat.LogPrefix + "Undead Legacy's UpdateMoveHelper prefix already sorts last; "
 					+ "leaving it alone.");
 				return true;
@@ -70,8 +70,58 @@ namespace PathSmoothingULCompat
 			});
 
 			Patch reordered = FindPrefix(original, undeadLegacyPrefix);
-			PrefixOrder = DescribeOrder(original);
 			return reordered != null && reordered.priority == Priority.Last;
+		}
+
+		/// <summary>
+		/// Whether PathSmoothing's prefix will be called before Undead Legacy's - the whole point of
+		/// this fix, and the one thing worth checking at a glance.
+		///
+		/// Read live rather than remembered from load time, because it can genuinely change
+		/// afterwards: <c>ps 0</c> unpatches PathSmoothing's prefix and <c>ps 1</c> re-registers it
+		/// with a fresh index. False when either prefix is missing, which is the honest answer while
+		/// PathSmoothing is switched off.
+		/// </summary>
+		internal static bool OrderIsCorrect()
+		{
+			Patch[] ordered = OrderedPrefixes();
+			int pathSmoothing = IndexOfAssembly(ordered, PathSmoothingAssembly);
+			int undeadLegacy = IndexOfAssembly(ordered, UndeadLegacyAssembly);
+			return pathSmoothing >= 0 && undeadLegacy >= 0 && pathSmoothing < undeadLegacy;
+		}
+
+		/// <summary>
+		/// The call order as just the owning mods - <c>PathSmoothing -&gt; UndeadLegacy</c>. What
+		/// <c>psul</c> shows in its short block; <see cref="DescribeOrder"/> is the same list with the
+		/// detail kept.
+		/// </summary>
+		internal static string ShortOrder()
+		{
+			Patch[] ordered = OrderedPrefixes();
+			if (ordered.Length == 0)
+			{
+				return "no prefixes registered";
+			}
+			return string.Join(" -> ", Array.ConvertAll(ordered, AssemblyOf));
+		}
+
+		/// <summary>
+		/// The call order with each prefix's declaring type and priority, for <c>psul info</c> and the
+		/// load-time log line.
+		/// </summary>
+		internal static string DescribeOrder()
+		{
+			Patch[] ordered = OrderedPrefixes();
+			if (ordered.Length == 0)
+			{
+				return "no prefixes registered";
+			}
+			return string.Join(" -> ", Array.ConvertAll(ordered, Describe));
+		}
+
+		private static MethodBase Original()
+		{
+			return AccessTools.Method(typeof(EntityMoveHelper), "UpdateMoveHelper");
 		}
 
 		private static Patch FindPrefix(MethodBase original, MethodInfo patchMethod)
@@ -85,28 +135,53 @@ namespace PathSmoothingULCompat
 		}
 
 		/// <summary>
-		/// Renders the prefixes in the order Harmony will call them: priority descending, then
-		/// registration index ascending - the same rule <c>PatchSorter</c> applies.
+		/// The prefixes in the order Harmony will call them: priority descending, then registration
+		/// index ascending - the same rule <c>PatchSorter</c> applies. Everything reported about the
+		/// order goes through here, so the short form, the long form and the verdict cannot disagree.
 		/// </summary>
-		private static string DescribeOrder(MethodBase original)
+		private static Patch[] OrderedPrefixes()
 		{
-			Patches info = Harmony.GetPatchInfo(original);
-			if (info == null || info.Prefixes.Count == 0)
+			MethodBase original = Original();
+			Patches info = original == null ? null : Harmony.GetPatchInfo(original);
+			if (info == null)
 			{
-				return "no prefixes registered";
+				return new Patch[0];
 			}
-			IEnumerable<string> ordered = info.Prefixes
-				.OrderByDescending(p => p.priority)
-				.ThenBy(p => p.index)
-				.Select(Describe);
-			return string.Join(" -> ", ordered.ToArray());
+			Patch[] prefixes = new Patch[info.Prefixes.Count];
+			info.Prefixes.CopyTo(prefixes, 0);
+			Array.Sort(prefixes, ComparePatches);
+			return prefixes;
+		}
+
+		/// <summary>Harmony's own rule: priority descending, then registration index ascending.</summary>
+		private static int ComparePatches(Patch left, Patch right)
+		{
+			int byPriority = right.priority.CompareTo(left.priority);
+			return byPriority != 0 ? byPriority : left.index.CompareTo(right.index);
+		}
+
+		private static int IndexOfAssembly(Patch[] ordered, string assemblyName)
+		{
+			for (int i = 0; i < ordered.Length; i++)
+			{
+				if (AssemblyOf(ordered[i]) == assemblyName)
+				{
+					return i;
+				}
+			}
+			return -1;
+		}
+
+		private static string AssemblyOf(Patch patch)
+		{
+			return patch.PatchMethod.DeclaringType?.Assembly.GetName().Name ?? "?";
 		}
 
 		private static string Describe(Patch patch)
 		{
 			MethodInfo method = patch.PatchMethod;
-			string owner = method.DeclaringType?.Assembly.GetName().Name ?? "?";
-			return owner + "." + (method.DeclaringType?.Name ?? "?") + " (priority " + patch.priority + ")";
+			return AssemblyOf(patch) + "." + (method.DeclaringType?.Name ?? "?")
+				+ " (priority " + patch.priority + ")";
 		}
 	}
 }
