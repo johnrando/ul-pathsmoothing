@@ -26,8 +26,10 @@ original behaviour just as it does for PathSmoothing's own patches.
 
 ## Installing
 
-Requires PathSmoothing and Undead Legacy to already be installed. Copy `dist/PathSmoothingULCompat/`
-(checked into this repo, so no build needed) into the game's `Mods/`:
+Requires PathSmoothing and Undead Legacy to already be installed.
+
+Download the zip from [Releases](https://github.com/johnrando/ul-pathsmoothing/releases) and extract
+it into the game's `Mods/`. The mod folder is the root of the archive, so it lands as:
 
 ```
 Mods/PathSmoothingULCompat/
@@ -35,7 +37,7 @@ Mods/PathSmoothingULCompat/
 └── PathSmoothingULCompat.dll
 ```
 
-Load order does not matter.
+Load order does not matter, and nothing needs building.
 
 ## Verifying it works
 

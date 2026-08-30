@@ -8,8 +8,6 @@
 
 !/src/
 !/src/**
-!/dist/
-!/dist/**
 
 # Build output that lives inside src/.
 src/**/bin/
