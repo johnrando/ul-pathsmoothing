@@ -20,7 +20,7 @@ namespace PathSmoothingULCompat
 		internal const string TestedFrom = "2.7.15";
 
 		/// <summary>Newest build tested. Bump only after re-checking UL's movement code against each fix.</summary>
-		internal const string TestedTo = "2.7.31";
+		internal const string TestedTo = "2.7.32";
 
 		private static string TestedRange =>
 			TestedFrom == TestedTo ? TestedFrom : TestedFrom + " - " + TestedTo;

@@ -10,7 +10,7 @@ It is additive: it does not modify, replace or redistribute either mod's DLL. In
 it wires itself in at load time. With either of the other two missing, it logs a line and does
 nothing.
 
-Tested against **Undead Legacy 2.7.15 through 2.7.31**. Other versions still work — the mod warns
+Tested against **Undead Legacy 2.7.15 through 2.7.32**. Other versions still work — the mod warns
 rather than blocking, and each fix reports an error if the code it targets no longer matches.
 
 ## What it fixes
@@ -73,7 +73,7 @@ PathSmoothing/UL compatibility patch is WORKING
   prefix order      : PathSmoothing -> UndeadLegacy (correct)
   end-of-path fix   : applied, 1 check rewritten
   smoothing (ps)    : on
-  Undead Legacy     : 2.7.31 - tested (read from [BepInPlugin] attribute)
+  Undead Legacy     : 2.7.32 - tested (read from [BepInPlugin] attribute)
   prefix-order fix  : applied - UL's UpdateMoveHelper prefix now sorts last
   end-of-path fix   : applied - 1 check(s) rewritten in UL's UpdateMoveHelper prefix
   'ps' tracking     : applied - 'ps' also switches these patches
