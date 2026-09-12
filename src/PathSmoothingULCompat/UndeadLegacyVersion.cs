@@ -6,36 +6,22 @@ using HarmonyLib;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Reports which Undead Legacy build is running and warns when it falls outside the range these
-	/// patches were tested against. It does not gate anything - UL's current branch is numbered
-	/// 2.7.x and takes a new patch number regularly, so refusing to install on any unrecognised
-	/// number would break the mod on routine updates.
+	/// Reports the running Undead Legacy build and warns when it is outside the tested range. Advisory
+	/// only: UL's 2.7.x branch takes new patch numbers routinely, and each fix already checks the code
+	/// it targets. The warning covers what that cannot: a semantic change with the same code shape.
 	///
-	/// The real safety net is structural, not version-based: each fix checks the code it targets and
-	/// logs loudly if it no longer matches. The transpiler in particular matches an exact IL pattern
-	/// and removes itself when it does not find it. What that cannot catch is a *semantic* change -
-	/// same code shape, different meaning - which is what this warning is for.
-	///
-	/// Only two of UL's version markers are trustworthy, both on <c>H_UndeadLegacy</c>: the
-	/// <c>[BepInPlugin]</c> attribute and the <c>pluginVersion</c> literal. The assembly version is
-	/// hardcoded 1.0.0.0 and <c>ModInfo.xml</c> lags reality (it read 2.7.01 on a 2.7.19 install), so
-	/// neither is used here.
+	/// Only the <c>[BepInPlugin]</c> attribute and the <c>pluginVersion</c> literal on
+	/// <c>H_UndeadLegacy</c> are trustworthy. The assembly version is hardcoded 1.0.0.0 and
+	/// <c>ModInfo.xml</c> lags reality.
 	/// </summary>
 	internal static class UndeadLegacyVersion
 	{
-		/// <summary>
-		/// Oldest Undead Legacy build these patches were run against. UL's movement code was unchanged
-		/// across the whole range, so any build inside it reports as tested.
-		/// </summary>
+		/// <summary>Oldest Undead Legacy build these patches were run against.</summary>
 		internal const string TestedFrom = "2.7.15";
 
-		/// <summary>
-		/// Newest Undead Legacy build these patches were run against. Bump only after re-checking UL.s
-		/// movement code against what each fix targets - bumping it alone just silences the warning.
-		/// </summary>
-		internal const string TestedTo = "2.7.19";
+		/// <summary>Newest build tested. Bump only after re-checking UL's movement code against each fix.</summary>
+		internal const string TestedTo = "2.7.31";
 
-		/// <summary>Human-readable form of the tested range, for log lines and <c>psul</c>.</summary>
 		private static string TestedRange =>
 			TestedFrom == TestedTo ? TestedFrom : TestedFrom + " - " + TestedTo;
 
@@ -43,13 +29,10 @@ namespace PathSmoothingULCompat
 
 		internal static string DetectedSource = "none";
 
-		/// <summary>One-line summary for the <c>psul</c> console command.</summary>
+		/// <summary>One-line summary for <c>psul</c>.</summary>
 		internal static string Status = "not checked";
 
-		/// <summary>
-		/// Logs the detected version, warning if it falls outside <see cref="TestedFrom"/> ..
-		/// <see cref="TestedTo"/>. Never blocks: patching continues either way.
-		/// </summary>
+		/// <summary>Logs the detected version, warning if outside the tested range. Never blocks.</summary>
 		internal static void Report()
 		{
 			string raw = Detect();
@@ -93,10 +76,7 @@ namespace PathSmoothingULCompat
 			return ReadFromBepInPluginAttribute(plugin) ?? ReadFromVersionConstant(plugin);
 		}
 
-		/// <summary>
-		/// Reads the third argument of <c>[BepInPlugin(guid, name, version)]</c>. Uses
-		/// <see cref="CustomAttributeData"/> so this assembly needs no reference to BepInEx.
-		/// </summary>
+		/// <summary>Third argument of <c>[BepInPlugin(guid, name, version)]</c>, read without referencing BepInEx.</summary>
 		private static string ReadFromBepInPluginAttribute(Type plugin)
 		{
 			try
@@ -148,12 +128,8 @@ namespace PathSmoothingULCompat
 		}
 
 		/// <summary>
-		/// Tolerant parse, normalised to exactly major.minor.patch - the shape Undead Legacy uses.
-		///
-		/// Trims a leading 'v' and anything from the first non-version character, so "v2.7.15-beta"
-		/// reads as 2.7.15 and a branch label like "2.7.x" reads as 2.7.0. Missing components become 0
-		/// and a fourth is dropped, so "2.7.15.0" matches "2.7.15" rather than counting as different -
-		/// without that, System.Version leaves absent components at -1.
+		/// Tolerant parse normalised to major.minor.patch: trims a leading 'v' and any suffix, so
+		/// "v2.7.15-beta" is 2.7.15, "2.7.x" is 2.7.0 and "2.7.15.0" equals "2.7.15".
 		/// </summary>
 		private static Version Parse(string raw)
 		{

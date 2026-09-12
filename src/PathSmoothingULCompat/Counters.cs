@@ -1,12 +1,9 @@
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Live hit counts for the end-of-path fix, reported by the <c>psul</c> console command.
-	///
-	/// These exist because the load-time log can only prove the IL rewrite matched; it cannot prove
-	/// the rewritten call site is reached at runtime, which is the one thing worth being sure of
-	/// when the patched method is itself another mod's Harmony prefix. A non-zero
-	/// <see cref="EndOfPathChecks"/> is that proof. All writes happen on the main thread.
+	/// Hit counts for the end-of-path fix, reported by <c>psul</c>. The load-time log only proves the
+	/// IL rewrite matched; a non-zero <see cref="EndOfPathChecks"/> proves the rewritten site inside
+	/// UL's prefix is actually reached. Main thread only.
 	/// </summary>
 	internal static class Counters
 	{

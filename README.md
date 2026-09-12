@@ -10,7 +10,7 @@ It is additive: it does not modify, replace or redistribute either mod's DLL. In
 it wires itself in at load time. With either of the other two missing, it logs a line and does
 nothing.
 
-Tested against **Undead Legacy 2.7.15 through 2.7.19**. Other versions still work — the mod warns
+Tested against **Undead Legacy 2.7.15 through 2.7.31**. Other versions still work — the mod warns
 rather than blocking, and each fix reports an error if the code it targets no longer matches.
 
 ## What it fixes
@@ -73,7 +73,7 @@ PathSmoothing/UL compatibility patch is WORKING
   prefix order      : PathSmoothing -> UndeadLegacy (correct)
   end-of-path fix   : applied, 1 check rewritten
   smoothing (ps)    : on
-  Undead Legacy     : 2.7.19 - tested (read from [BepInPlugin] attribute)
+  Undead Legacy     : 2.7.31 - tested (read from [BepInPlugin] attribute)
   prefix-order fix  : applied - UL's UpdateMoveHelper prefix now sorts last
   end-of-path fix   : applied - 1 check(s) rewritten in UL's UpdateMoveHelper prefix
   'ps' tracking     : applied - 'ps' also switches these patches
@@ -86,3 +86,27 @@ PathSmoothing/UL compatibility patch is WORKING
 inside the rewritten code in UL's own movement prefix. To make it move, give a zombie a jumpable gap
 to cross rather than a clear run at you. `psul reset` zeroes the counters so a single scenario can be
 measured on its own.
+
+## Implementation Potential for Undead Legacy
+
+This compatibility mod is an overcomplication of what can be a simple fix within Undead Legacy's
+movement code.
+
+The zig-zag half of this can be fixed inside Undead Legacy with one attribute and no reference to
+PathSmoothing. The prefix in `H_ZombieDiggingPatch.EntityMoveHelper_UpdateMoveHelper` replaces
+the body of `EntityMoveHelper.UpdateMoveHelper` and returns `false`, but it is registered at
+default priority. Any other mod's `void` prefix on the same method that expects to run before
+the body (PathSmoothing's writes `moveToPos`) registers later, is called after UL's, and its
+write is never read.
+
+```csharp
+[HarmonyPatch(typeof(EntityMoveHelper), "UpdateMoveHelper")]
+private class EntityMoveHelper_UpdateMoveHelper
+{
+    [HarmonyPriority(Priority.Last)]
+    private static bool Prefix(EntityMoveHelper __instance)
+```
+
+Harmony sorts prefixes by priority before registration order, so a body-replacing prefix at
+`Priority.Last` runs after every ordinary prefix regardless of load order. This mod already
+checks for that priority and leaves the prefix alone when it finds it.

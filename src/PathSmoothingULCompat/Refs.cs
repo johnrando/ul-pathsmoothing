@@ -7,45 +7,36 @@ using HarmonyLib;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Late-bound handles onto the two mods this patch sits between. Neither is referenced
-	/// at compile time: the patch has to load, say something useful and then stay out of the
-	/// way when either mod is absent or has moved the member we need.
+	/// Late-bound handles onto the two mods this patch sits between. Neither is referenced at
+	/// compile time, so the patch loads and logs cleanly when either is absent or has moved a member.
 	/// </summary>
 	internal static class Refs
 	{
-		private const string PathSmoothingAssemblyName = "PathSmoothing";
-		private const string UndeadLegacyAssemblyName = "UndeadLegacy";
+		internal const string PathSmoothingAssemblyName = "PathSmoothing";
+		internal const string UndeadLegacyAssemblyName = "UndeadLegacy";
 
-		/// <summary>
-		/// <c>PathSmoothing.Utils.GetPathLengthDistanceSq(PathEntity)</c> - the real path-length
-		/// calculation PathSmoothing substitutes for <c>PathEntity.NodeCountRemaining()</c>.
-		/// </summary>
+		/// <summary><c>PathSmoothing.Utils.GetPathLengthDistanceSq(PathEntity)</c>.</summary>
 		internal static MethodInfo GetPathLengthDistanceSq;
 
-		/// <summary>
-		/// <c>PathSmoothing.Common.DontSmoothEntities</c>. The field is <c>static readonly</c>, so
-		/// caching the set itself instead of the field is safe.
-		/// </summary>
+		/// <summary><c>PathSmoothing.Common.DontSmoothEntities</c> (static readonly, so the set itself is cached). Diagnostics only.</summary>
 		internal static HashSet<EntityAlive> DontSmoothEntities;
 
-		/// <summary>
-		/// <c>PathSmoothing.Common.DirectMovers</c> - entities PathSmoothing has cleared to ignore
-		/// their grid path and head straight for the target. Diagnostics only.
-		/// </summary>
+		/// <summary><c>PathSmoothing.Common.DirectMovers</c>. Diagnostics only.</summary>
 		internal static HashSet<EntityAlive> DirectMovers;
 
 		/// <summary>
-		/// UL's <c>H_ZombieDiggingPatch+EntityMoveHelper_UpdateMoveHelper.Prefix</c>: a from-scratch
-		/// reimplementation of <c>EntityMoveHelper.UpdateMoveHelper</c> that returns false on every
-		/// exit path, so the vanilla body PathSmoothing transpiles never executes.
+		/// UL's <c>H_ZombieDiggingPatch+EntityMoveHelper_UpdateMoveHelper.Prefix</c>: a reimplementation
+		/// of <c>EntityMoveHelper.UpdateMoveHelper</c> that returns false on every exit path.
 		/// </summary>
 		internal static MethodInfo UndeadLegacyMoveHelperPrefix;
+
+		private static readonly Dictionary<string, Assembly> assemblies =
+			new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
 
 		internal static bool PathSmoothingPresent => FindAssembly(PathSmoothingAssemblyName) != null;
 
 		internal static bool UndeadLegacyPresent => FindAssembly(UndeadLegacyAssemblyName) != null;
 
-		/// <summary>Looks up a type in Undead Legacy's assembly, logging if it is missing.</summary>
 		internal static Type UndeadLegacyType(string typeName)
 		{
 			return FindType(UndeadLegacyAssemblyName, typeName);
@@ -57,10 +48,7 @@ namespace PathSmoothingULCompat
 			return FindMethod(PathSmoothingAssemblyName, "PathSmoothing.Common", name, Type.EmptyTypes);
 		}
 
-		/// <summary>
-		/// Resolves UL's UpdateMoveHelper prefix. Needed by both the prefix-order fix and the
-		/// end-of-path transpiler, so it is resolved on its own.
-		/// </summary>
+		/// <summary>Resolves UL's UpdateMoveHelper prefix once; both fixes need it.</summary>
 		internal static bool ResolveUndeadLegacyMoveHelperPrefix()
 		{
 			if (UndeadLegacyMoveHelperPrefix != null)
@@ -91,7 +79,6 @@ namespace PathSmoothingULCompat
 			return true;
 		}
 
-		/// <summary>Resolves the path-length calculation the end-of-path transpiler calls.</summary>
 		internal static bool ResolveGetPathLengthDistanceSq()
 		{
 			GetPathLengthDistanceSq = FindMethod(
@@ -109,12 +96,11 @@ namespace PathSmoothingULCompat
 			return true;
 		}
 
-		/// <summary>Resolves PathSmoothing's two shared entity sets. Best effort; diagnostics use them too.</summary>
-		internal static bool ResolveSharedSets()
+		/// <summary>Best effort: the sets are only used by <c>psul info</c>.</summary>
+		internal static void ResolveSharedSets()
 		{
 			DontSmoothEntities = ResolveSet("DontSmoothEntities");
 			DirectMovers = ResolveSet("DirectMovers");
-			return DontSmoothEntities != null;
 		}
 
 		private static HashSet<EntityAlive> ResolveSet(string fieldName)
@@ -135,11 +121,16 @@ namespace PathSmoothingULCompat
 
 		private static Assembly FindAssembly(string simpleName)
 		{
+			if (assemblies.TryGetValue(simpleName, out Assembly cached))
+			{
+				return cached;
+			}
 			Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
 			for (int i = 0; i < loaded.Length; i++)
 			{
 				if (string.Equals(loaded[i].GetName().Name, simpleName, StringComparison.OrdinalIgnoreCase))
 				{
+					assemblies[simpleName] = loaded[i];
 					return loaded[i];
 				}
 			}

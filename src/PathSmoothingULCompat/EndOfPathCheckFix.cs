@@ -8,15 +8,14 @@ using HarmonyLib;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Re-applies PathSmoothing's <c>FarBlockAttackFix</c> IL edit inside Undead Legacy's
+	/// Re-applies PathSmoothing's <c>FarBlockAttackFix</c> inside Undead Legacy's
 	/// <c>H_ZombieDiggingPatch</c> prefix.
 	///
-	/// PathSmoothing transpiles vanilla <c>EntityMoveHelper.UpdateMoveHelper</c> to replace its
-	/// <c>path.NodeCountRemaining() &lt;= 1</c> end-of-path test with a real path length, because
-	/// smoothing changes node spacing and makes the node count a bad proxy for "nearly there".
-	/// UL prefixes the same vanilla method and returns false on every exit path, so that vanilla
-	/// body - and PathSmoothing's edit of it - never runs, and UL's own untouched copy of the check
-	/// applies instead. Transpiling UL's prefix puts the fix back on the code path that executes.
+	/// PathSmoothing transpiles vanilla <c>EntityMoveHelper.UpdateMoveHelper</c>, replacing its
+	/// <c>NodeCountRemaining() &lt;= 1</c> end-of-path test with a real path length, because smoothing
+	/// changes node spacing. UL's prefix returns false on every exit path, so that vanilla body never
+	/// runs and UL's own copy of the check applies instead. Transpiling UL's prefix puts the fix back
+	/// on the code path that executes.
 	/// </summary>
 	internal static class EndOfPathCheckFix
 	{
@@ -42,11 +41,9 @@ namespace PathSmoothingULCompat
 		}
 
 		/// <summary>
-		/// Stands in for <c>path.NodeCountRemaining()</c> at the rewritten call sites. Going through
-		/// this shim rather than calling PathSmoothing directly keeps the <c>ps</c> console command
-		/// meaningful: with smoothing switched off, node spacing is normal again and the original
-		/// node-count test is the right one, so it is handed back exactly - <c>&lt;= 1</c> nodes maps
-		/// to a value at the threshold, more than that maps to a value above it.
+		/// Stands in for <c>path.NodeCountRemaining()</c> at the rewritten site. A shim rather than a
+		/// direct call so <c>ps 0</c> still works: with smoothing off, the original node-count test is
+		/// handed back (<c>&lt;= 1</c> nodes maps to 0, more maps above the threshold).
 		/// </summary>
 		internal static float EndOfPathDistanceSq(PathEntity path)
 		{
@@ -68,8 +65,7 @@ namespace PathSmoothingULCompat
 			MethodInfo replacement = AccessTools.Method(typeof(EndOfPathCheckFix), nameof(EndOfPathDistanceSq));
 			PatchedSites = 0;
 
-			// Editing in place rather than replacing instructions keeps any labels and exception
-			// block boundaries attached to them.
+			// Instructions are edited in place so their labels and exception-block boundaries survive.
 			for (int i = 0; i < codes.Count - 1; i++)
 			{
 				MethodInfo called = codes[i].operand as MethodInfo;
@@ -86,9 +82,8 @@ namespace PathSmoothingULCompat
 					continue;
 				}
 
-				// int32 NodeCountRemaining()  ->  float32 EndOfPathDistanceSq(PathEntity), which
-				// consumes the same PathEntity already on the stack. The comparison that follows
-				// (cgt/ceq) is valid on float32 operands as-is.
+				// int32 NodeCountRemaining() -> float32 EndOfPathDistanceSq(PathEntity); the PathEntity
+				// is already on the stack and the following cgt/ceq is valid on float32 as-is.
 				codes[i].opcode = OpCodes.Call;
 				codes[i].operand = replacement;
 				codes[i + 1].opcode = OpCodes.Ldc_R4;

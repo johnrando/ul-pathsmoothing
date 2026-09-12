@@ -5,9 +5,8 @@ using HarmonyLib;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// Applies the two compatibility patches. Both mods are resolved late and each patch is gated on
-	/// its own prerequisites, so an install missing either mod - or a future version that has moved
-	/// something - degrades to a log line instead of an exception.
+	/// Applies the two compatibility patches. Each is gated on its own prerequisites, so a missing
+	/// mod or a moved member degrades to a log line naming the behaviour that is lost.
 	/// </summary>
 	internal static class Compat
 	{
@@ -17,24 +16,24 @@ namespace PathSmoothingULCompat
 
 		private const string NotRunYet = "not applied - mod init has not run";
 
+		private const string PrefixOrderFixMissing = LogPrefix + "Prefix-order fix NOT applied: "
+			+ "PathSmoothing's smoothing will be overwritten before Undead Legacy reads it, and "
+			+ "entities will follow the raw grid path.";
+
 		/// <summary>
-		/// Whether PathSmoothing is currently switched on, tracked via
-		/// <see cref="SmoothingToggleTracker"/>. Assumed on until told otherwise: PathSmoothing may
-		/// not have run its own InitMod yet when this is first read.
+		/// PathSmoothing's on/off state, mirrored by <see cref="SmoothingToggleTracker"/>. Assumed on
+		/// until told otherwise, since PathSmoothing's own InitMod may not have run yet.
 		/// </summary>
 		internal static bool SmoothingActive = true;
 
-		/// <summary>Outcome of each fix, as reported by the <c>psul</c> console command.</summary>
+		/// <summary>Prose outcome of each fix, for <c>psul info</c>.</summary>
 		internal static string EndOfPathFixStatus = NotRunYet;
 
 		internal static string PrefixOrderFixStatus = NotRunYet;
 
 		internal static string ToggleTrackingStatus = NotRunYet;
 
-		/// <summary>
-		/// The same two outcomes as booleans, so <c>psul</c>'s verdict line is read off state rather
-		/// than off the wording of the prose above.
-		/// </summary>
+		/// <summary>The same outcomes as state, so <c>psul</c>'s verdict is not read off wording.</summary>
 		internal static bool PrefixOrderFixApplied;
 
 		internal static bool EndOfPathFixApplied;
@@ -64,9 +63,7 @@ namespace PathSmoothingULCompat
 
 		private static void ApplyPatches()
 		{
-			// ModManager loads every mod assembly before calling any IModApi.InitMod, and UL's own
-			// Harmony patches are applied earlier still (it is a BepInEx plugin), so both mods are
-			// fully present by the time this runs regardless of mod folder ordering.
+			// Both mods are loaded before any InitMod runs, so folder order is irrelevant.
 			if (!Refs.PathSmoothingPresent)
 			{
 				SetAllStatuses("not applied - PathSmoothing is not installed");
@@ -80,9 +77,7 @@ namespace PathSmoothingULCompat
 				return;
 			}
 
-			// Advisory only. UL's branch is numbered 2.7.x and takes new patch numbers routinely, so
-			// gating on the version would break the mod on ordinary updates. Each fix below checks
-			// the code it targets instead, and says so when it no longer matches.
+			// Advisory only; each fix checks the code it targets instead of gating on the version.
 			UndeadLegacyVersion.Report();
 
 			Refs.ResolveSharedSets();
@@ -93,27 +88,20 @@ namespace PathSmoothingULCompat
 			ApplyEndOfPathFix(harmony);
 		}
 
-		/// <summary>
-		/// The important one: without it PathSmoothing's smoothing is computed every tick and never
-		/// consumed, and entities zig-zag along the raw grid path.
-		/// </summary>
+		/// <summary>The one that matters: without it the smoothing target is never consumed.</summary>
 		private static void ApplyPrefixOrderFix(Harmony harmony)
 		{
 			if (!Refs.ResolveUndeadLegacyMoveHelperPrefix())
 			{
 				PrefixOrderFixStatus = "NOT APPLIED - could not find UL's UpdateMoveHelper prefix";
-				Log.Error(LogPrefix + "Prefix-order fix NOT applied: PathSmoothing's smoothing will be "
-					+ "overwritten before Undead Legacy reads it, and entities will follow the raw grid "
-					+ "path.");
+				Log.Error(PrefixOrderFixMissing);
 				return;
 			}
 
 			if (!MoveHelperPrefixOrderFix.Apply(harmony, Refs.UndeadLegacyMoveHelperPrefix))
 			{
 				PrefixOrderFixStatus = "NOT APPLIED - could not reorder (see log)";
-				Log.Error(LogPrefix + "Prefix-order fix NOT applied: PathSmoothing's smoothing will be "
-					+ "overwritten before Undead Legacy reads it, and entities will follow the raw grid "
-					+ "path.");
+				Log.Error(PrefixOrderFixMissing);
 				return;
 			}
 

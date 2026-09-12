@@ -7,39 +7,23 @@ namespace PathSmoothingULCompat
 {
 	/// <summary>
 	/// Makes Undead Legacy's <c>UpdateMoveHelper</c> prefix sort last, so PathSmoothing's smoothing
-	/// prefix runs before it instead of after.
+	/// prefix runs before it. This is the fix for the visible zig-zag.
 	///
-	/// This is the fix for the visible zig-zag. PathSmoothing's smoothing works by overwriting
-	/// <c>EntityMoveHelper.moveToPos</c> in a void prefix - pointing the entity straight at its
-	/// target instead of at the next grid path node - and relying on the method body it precedes to
-	/// consume that value. UL's prefix *is* the body (it reimplements the method and returns false),
-	/// but both prefixes are registered at default priority, and UL registers roughly a second
-	/// earlier: it is a BepInEx plugin patched at chainloader time, while PathSmoothing patches from
-	/// ModManager's InitMod. Equal priority falls back to registration index, so UL runs first.
+	/// PathSmoothing smooths by overwriting <c>EntityMoveHelper.moveToPos</c> in a void prefix and
+	/// relying on the method body to consume it. UL's prefix <em>is</em> the body (it reimplements the
+	/// method and returns false). Both register at default priority, UL registers first, and every
+	/// prefix runs regardless, so each tick:
 	///
-	/// Every prefix still runs - HarmonyX calls them all unconditionally and only consults the
-	/// accumulated "run original" flag afterwards - but the order makes the write useless:
-	///
-	///   1. ASPPathNavigate.UpdateNavigation() sets moveToPos to the next grid path node. Every tick,
-	///      immediately before UpdateMoveHelper.
-	///   2. UL's prefix reads moveToPos - the grid node - moves the entity, returns false.
+	///   1. ASPPathNavigate.UpdateNavigation() sets moveToPos to the next grid path node.
+	///   2. UL's prefix reads it, moves the entity, returns false.
 	///   3. PathSmoothing's prefix writes moveToPos = straight at the target.
 	///   4. Next tick, step 1 overwrites it before anything reads it.
 	///
-	/// So the smoothing target is recomputed every tick and never once consumed, and entities follow
-	/// the raw grid path, stepping diagonally between voxel rows.
-	///
-	/// Demoting UL's prefix to <see cref="Priority.Last"/> restores the contract PathSmoothing was
-	/// written against: a prefix that replaces the method body belongs after the void prefixes that
-	/// expect to run before that body. PathSmoothing's own registration is left completely untouched,
-	/// so its <c>ps</c> enable/disable keeps working exactly as designed.
+	/// A prefix that replaces the body belongs after the void prefixes written to run before it, so
+	/// UL's is demoted to <see cref="Priority.Last"/>. PathSmoothing's registration is untouched.
 	/// </summary>
 	internal static class MoveHelperPrefixOrderFix
 	{
-		private const string PathSmoothingAssembly = "PathSmoothing";
-
-		private const string UndeadLegacyAssembly = "UndeadLegacy";
-
 		internal static bool Apply(Harmony harmony, MethodInfo undeadLegacyPrefix)
 		{
 			MethodBase original = Original();
@@ -74,27 +58,18 @@ namespace PathSmoothingULCompat
 		}
 
 		/// <summary>
-		/// Whether PathSmoothing's prefix will be called before Undead Legacy's - the whole point of
-		/// this fix, and the one thing worth checking at a glance.
-		///
-		/// Read live rather than remembered from load time, because it can genuinely change
-		/// afterwards: <c>ps 0</c> unpatches PathSmoothing's prefix and <c>ps 1</c> re-registers it
-		/// with a fresh index. False when either prefix is missing, which is the honest answer while
-		/// PathSmoothing is switched off.
+		/// Whether PathSmoothing's prefix is called before Undead Legacy's. Read live rather than at
+		/// load time because <c>ps 0</c> / <c>ps 1</c> unregister and re-register PathSmoothing's.
 		/// </summary>
 		internal static bool OrderIsCorrect()
 		{
 			Patch[] ordered = OrderedPrefixes();
-			int pathSmoothing = IndexOfAssembly(ordered, PathSmoothingAssembly);
-			int undeadLegacy = IndexOfAssembly(ordered, UndeadLegacyAssembly);
+			int pathSmoothing = IndexOfAssembly(ordered, Refs.PathSmoothingAssemblyName);
+			int undeadLegacy = IndexOfAssembly(ordered, Refs.UndeadLegacyAssemblyName);
 			return pathSmoothing >= 0 && undeadLegacy >= 0 && pathSmoothing < undeadLegacy;
 		}
 
-		/// <summary>
-		/// The call order as just the owning mods - <c>PathSmoothing -&gt; UndeadLegacy</c>. What
-		/// <c>psul</c> shows in its short block; <see cref="DescribeOrder"/> is the same list with the
-		/// detail kept.
-		/// </summary>
+		/// <summary>Call order by owning mod only, e.g. <c>PathSmoothing -&gt; UndeadLegacy</c>.</summary>
 		internal static string ShortOrder()
 		{
 			Patch[] ordered = OrderedPrefixes();
@@ -105,10 +80,7 @@ namespace PathSmoothingULCompat
 			return string.Join(" -> ", Array.ConvertAll(ordered, AssemblyOf));
 		}
 
-		/// <summary>
-		/// The call order with each prefix's declaring type and priority, for <c>psul info</c> and the
-		/// load-time log line.
-		/// </summary>
+		/// <summary>Call order with declaring type and priority, for <c>psul info</c> and the log.</summary>
 		internal static string DescribeOrder()
 		{
 			Patch[] ordered = OrderedPrefixes();
@@ -135,9 +107,8 @@ namespace PathSmoothingULCompat
 		}
 
 		/// <summary>
-		/// The prefixes in the order Harmony will call them: priority descending, then registration
-		/// index ascending - the same rule <c>PatchSorter</c> applies. Everything reported about the
-		/// order goes through here, so the short form, the long form and the verdict cannot disagree.
+		/// The prefixes in Harmony's call order: priority descending, then registration index
+		/// ascending. Every report of the order goes through here so the forms cannot disagree.
 		/// </summary>
 		private static Patch[] OrderedPrefixes()
 		{
@@ -153,7 +124,6 @@ namespace PathSmoothingULCompat
 			return prefixes;
 		}
 
-		/// <summary>Harmony's own rule: priority descending, then registration index ascending.</summary>
 		private static int ComparePatches(Patch left, Patch right)
 		{
 			int byPriority = right.priority.CompareTo(left.priority);

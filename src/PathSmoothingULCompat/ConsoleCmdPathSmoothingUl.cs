@@ -3,22 +3,10 @@ using System.Collections.Generic;
 namespace PathSmoothingULCompat
 {
 	/// <summary>
-	/// <c>psul</c> - prints a short block saying whether the compatibility patch is doing its job.
-	/// <c>psul info</c> prints the diagnostics and counters, <c>psul reset</c> zeroes them.
-	///
-	/// There is nothing to set here: both fixes are Harmony work done once at load, and
-	/// PathSmoothing's own <c>ps</c> already switches the behaviour off. So unlike the sibling mods
-	/// the bare command toggles nothing - it answers one question, "is this working", in as few lines
-	/// as that takes.
-	///
-	/// Everything behind that answer lives in <c>psul info</c>, and it matters more here than in
-	/// those siblings, because neither fix is visible from the outside. The prefix call order is the
-	/// direct evidence for the ordering fix, read live from Harmony rather than remembered from load
-	/// time. The end-of-path counter is the only evidence for the other one: the startup log can
-	/// prove the IL rewrite matched, but only a non-zero count proves the rewritten call site - which
-	/// sits inside another mod's Harmony prefix - is actually being reached.
-	///
-	/// This is separate from PathSmoothing's own <c>ps</c> command and does not shadow it.
+	/// <c>psul</c> prints a short verdict block; <c>psul info</c> adds version, patch state, prefix
+	/// call order and counters; <c>psul reset</c> zeroes the counters. There is nothing to set: both
+	/// fixes are load-time Harmony work and PathSmoothing's own <c>ps</c> switches the behaviour off.
+	/// Separate from <c>ps</c>, which is not shadowed.
 	/// </summary>
 	public class ConsoleCmdPathSmoothingUl : ConsoleCmdAbstract
 	{
@@ -26,7 +14,7 @@ namespace PathSmoothingULCompat
 
 		public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
 		{
-			string command = _params.Count > 0 ? _params[0].ToLower() : string.Empty;
+			string command = _params.Count > 0 ? _params[0].ToLowerInvariant() : string.Empty;
 
 			switch (command)
 			{
@@ -49,7 +37,7 @@ namespace PathSmoothingULCompat
 			}
 		}
 
-		/// <summary>The short block: the verdict, and the three lines it is drawn from.</summary>
+		/// <summary>The verdict and the three lines it is drawn from.</summary>
 		private static void OutputBlock()
 		{
 			Output(Verdict());
@@ -64,7 +52,6 @@ namespace PathSmoothingULCompat
 			Line("psul info", "version, counters and diagnostics");
 		}
 
-		/// <summary>The short block, with the read-only lines appended in the same column.</summary>
 		private static void OutputInfo()
 		{
 			OutputBlock();
@@ -87,21 +74,13 @@ namespace PathSmoothingULCompat
 			}
 		}
 
-		/// <summary>
-		/// One line of the block. Every label is padded to the width of the longest one -
-		/// "end-of-path checks" - so the short block and the read-only lines share a column and
-		/// <c>psul info</c> reads as one block rather than two.
-		/// </summary>
+		/// <summary>Labels pad to the longest one ("end-of-path checks") so both blocks share a column.</summary>
 		private static void Line(string _label, string _value)
 		{
 			Output("  " + _label.PadRight(18) + ": " + _value);
 		}
 
-		/// <summary>
-		/// The headline. Switched off is its own answer rather than a fault: with <c>ps 0</c> these
-		/// patches are inert by design, and PathSmoothing's prefix is unregistered, so there is no
-		/// call order left to be correct.
-		/// </summary>
+		/// <summary>IDLE under <c>ps 0</c> is by design: the patches are inert and there is no order to check.</summary>
 		private static string Verdict()
 		{
 			if (!Compat.SmoothingActive)
@@ -113,10 +92,7 @@ namespace PathSmoothingULCompat
 			return "PathSmoothing/UL compatibility patch is " + (working ? "WORKING" : "NOT WORKING");
 		}
 
-		/// <summary>
-		/// The call order, read live from Harmony. PathSmoothing has to come first, or its smoothed
-		/// move target is overwritten before Undead Legacy ever reads it.
-		/// </summary>
+		/// <summary>Read live from Harmony; PathSmoothing must come first or its target is overwritten.</summary>
 		private static string OrderLine()
 		{
 			string order = MoveHelperPrefixOrderFix.ShortOrder();
