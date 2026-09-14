@@ -1,0 +1,19 @@
+# Editor defaults for this repo. Every text file is UTF-8 without BOM, LF line endings,
+# and ends with a newline. Git enforces LF via .gitattributes; this covers the encoding.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.cs]
+indent_size = 4
+
+[*.{csproj,xml,md,yml,json}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
