@@ -58,13 +58,13 @@
     <PropertyGroup>
       <DistDir>$(MSBuildThisFileDirectory)..\..\dist\</DistDir>
       <ReleaseDir>$(MSBuildThisFileDirectory)..\..\release\</ReleaseDir>
-      <PackageDate>$([System.DateTime]::Now.ToString('yyyyMMdd'))</PackageDate>
+      <PackageDate>$([System.DateTime]::UtcNow.ToString('yyyyMMdd'))</PackageDate>
     </PropertyGroup>
     <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)ModInfo.xml" Query="/xml/Version/@value">
       <Output TaskParameter="Result" PropertyName="ModVersion" />
     </XmlPeek>
     <PropertyGroup>
-      <PackageFile>$(ReleaseDir)$(AssemblyName)-$(ModVersion)-$(PackageDate).zip</PackageFile>
+      <PackageFile>$(ReleaseDir)$(AssemblyName)-v$(ModVersion)-$(PackageDate).zip</PackageFile>
     </PropertyGroup>
     <MakeDir Directories="$(ReleaseDir)" />
     <ZipDirectory SourceDirectory="$(DistDir)" DestinationFile="$(PackageFile)" Overwrite="true" />
